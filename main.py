@@ -2,7 +2,7 @@ from machine import Pin
 from time import sleep
 import os
 import gc
-import WifiConnect
+from WifiConnect import ConnectWifi
 
 
 def init_routine():
@@ -16,12 +16,8 @@ def init_routine():
     
 def main():
     ConnectWifi()
-    while True:
-        Pin(2, Pin.OUT).value(1)
-        sleep(1)
-        Pin(2, Pin.OUT).value(0)
-        sleep(1)
+    
         
 if __name__ == "__main__":
-    init_routine_routine()
+    init_routine()
     main()
