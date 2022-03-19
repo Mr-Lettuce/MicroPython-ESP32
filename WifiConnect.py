@@ -1,12 +1,13 @@
 import network
 import time
+import os
 from machine import Pin
 
 def ConnectWifi():
   ''' To set up the SSID and SSID Password 'os' module must be reinstalled to get the option " os.environ['SSID'] = 'YourSSID' "
   Those environment variables can be set in the ' boot.py ' file
   '''
-  print('Running WifiConnect.py, updated with commit 34ab844')
+  print('Running WifiConnect.py, updated with commit f6b1302')
   led = Pin(2, Pin.OUT)
   sta_if = network.WLAN(network.STA_IF); sta_if.active(True)
   if not sta_if.isconnected():
