@@ -31,42 +31,79 @@ def peltier_set(float:percentage):
 def reach_temp(float:temp):
   '''
   activate the heater/peltier to reach the temp in a adaptative way
-  measure the % and define pwm duty acoordingly to the diff
-  d.temperature             temp needed           %           % to peltier        % to heater
-  5                         25                    20          -                   80
-  15                        25                    60          -                   40
-  25                        25                    100         -                   -
-  35                        25                    140         40                  -
-  45                        25                    180         80                  -
+  measure the % and define pwm duty acoording to the diff
   
   It will never use the heater neither peltier al full power to prevent unmanageable situations, so the percentage will be used in a defined range, easy to adjust above
   '''
   heater_min_percentage = 0
-  heater_max_percentage = 60
+  heater_max_percentage = 50
   peltier_min_percentage = 40
-  peltier_max_percentage = 90
+  peltier_max_percentage = 80
   dht.measure()
-  #adj_peltier_percentage = float((((dht.temperature * 100) / temp) * 100) / (peltier_max_percentage + 100 - peltier_min_percentage)) # no va
   
-  delta = (temp - dht.temperature)
-  delta   virtual     real
-  0       0%
-  1       40%         1%
-  5.5     65%         50% 
-  10      90%         100%
+  delta_temp = abs(float(temp - dht.temperature))
+  peltier_levels = float((peltier_max_percentage - peltier_min_percentage) / 10)
+  heater_levels = float((heater_max_percentage - heater_min_percentage) / 10)
+  '''
+  temp-set        dht             delta          p/h %
   
-  if temp > d.temperature:
+  25              14              11             50
+  25              15              10             50
+  25              16              9              45
+  25              17              8              40
+  25              18              7              35
+  25              19              6              30
+  25              20              5              25
+  25              21              4              20
+  25              22              3              15
+  25              23              2              10
+  25              24              1              5
+  25              25              0              0
+  25              26              1              44
+  25              27              2              48
+  25              28              3              52
+  25              29              4              56
+  25              30              5              60
+  25              31              6              64
+  25              32              7              68
+  25              33              8              72
+  25              34              9              76
+  25              35              10             80
+  25              40              15             80
+  
+  '''
+  if temp > d.temperature:                                        # Cooling function
     print('cool_that_shit')
-    peltier_set(
-    
-  if temp < d.temperature:
+    if delta_temp <= 10:
+      peltier_set(peltier_min_percentage + (delta_temp * peltier_levels))
+      adapt_cooler(20 + (delta_temp * 8))     # Use PWM between 20 and 100 %
+    else:
+      peltier_set(peltier_max_percentage)
+      adapt_cooler(100)
+  if temp < d.temperature:                                        # Heating function
     print('heat_that_shit')
-    
+    if delta_temp <= 10:
+      heater_set(heater_min_percentage + (delta_temp * heater_levels))
+      adapt_cooler(20 + (delta_temp * 8))
+    else:
+      heater_set(heater_max_percentage)
+      adapt_cooler(100)
+      
+# __DEBUG__
+print(f'd.temperature = {d.temperature},
+      delta_temp = {delta_temp},
+      d.humidity = {d.humidity},
+      peltier_set(peltier_min_percentage + (delta_temp * peltier_levels)) = {peltier_set(peltier_min_percentage + (delta_temp * peltier_levels))},
+      heater_set(heater_min_percentage + (delta_temp * heater_levels)) = {heater_set(heater_min_percentage + (delta_temp * heater_levels))},
+      adapt_cooler(20 + (delta_temp * 8)) = {adapt_cooler(20 + (delta_temp * 8))}')
+      
+      
 def adapt_cooler():
   ''' 
   for internal control of the cooler to be as quiet as possible
   measure the % close to temp max set for the peltier sink
   '''
+  
   
 #def adapt_light():
   '''
