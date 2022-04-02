@@ -1,7 +1,7 @@
 import os
 import machine
 from machine import Pin, PWM, ADC
-from time import sleep
+import time
 import dht
 import math
 import gc
@@ -27,9 +27,10 @@ water_p= ADC(Pin(WATER_PROBE_PIN))
 sink_p = ADC(Pin(SINK_PROBE_PIN))
 
 #Actuators
-pelt = machine.PWM(Pin(PELT_PIN), freq=500, duty=612)
-heat = machine.PWM(Pin(HEAT_PIN), freq=500, duty=612)
-cooler = machine.PWM(Pin(COOLER_PIN), freq=500, duty=612)
+pelt        = machine.PWM(Pin(PELT_PIN), freq=500, duty=2)
+heat        = machine.PWM(Pin(HEAT_PIN), freq=500, duty=2)
+cooler      = machine.PWM(Pin(COOLER_PIN), freq=500, duty=2)
+ventilation = machine.PWM(Pin(VENTILATION_PIN), freq=500, duty=2)
 
 #Indicators
 #rPin = Pin(R_LED_PIN, Pin.OUT)
@@ -37,7 +38,7 @@ cooler = machine.PWM(Pin(COOLER_PIN), freq=500, duty=612)
 #bPin = Pin(B_LED_PIN, Pin.OUT)
 
 
-def threaded_monitoring():
+def control_monitoring():
   '''
   This function sense the temperature and humidity of all sensors and control the sink temperature trough PWM and a cooler.
   Also control the temperature needs comparing to the routine.
@@ -88,6 +89,8 @@ def threaded_monitoring():
         cooler_set(100)
       else:
         cooler_set(0)
+      reach_temp(routine0.temperature)
+      loopcount2 = 0
     gc.collect()
     
     
@@ -196,4 +199,4 @@ def reach_temp(temp: float):
 
 
 if __name__=='__main__':
-    _thread.start_new_thread(threaded_monitoring, ())
+    _thread.start_new_thread(control_monitoring, ())
