@@ -1,11 +1,13 @@
 import os
 import gc
-import AioFunctions
-import HwControl
+from AioFunctions import mqtt_connect_and_subscribe
+from HwControl import control_monitoring
 from WifiConnect import ConnectWifi
 from MiscFunctions import init_routine
 from MiscFunctions import Routine
 import MiscFunctions
+import _thread
+
 
 
 def main():
