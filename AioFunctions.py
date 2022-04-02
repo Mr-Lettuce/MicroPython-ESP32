@@ -1,3 +1,5 @@
+#Latest commit e663214
+
 from umqtt.robust import MQTTClient
 from time import sleep
 import os
@@ -82,7 +84,7 @@ def send_mqtt(topic, msg):                                              # to_fee
     '''
     #to_feed = bytes('{:s}/feeds/{:s}'.format(ADAFRUIT_USERNAME, b'topic'), 'utf-8')
     to_feed = bytes('{:s}/feeds/{:s}'.format(ADAFRUIT_USERNAME, topic), 'utf-8')
-    print(f'__DEBUG__ to_feed = {to_feed} , msg = {msg} ')
+    #print(f'__DEBUG__ to_feed = {to_feed} , msg = {msg} ')
     client.publish(to_feed, bytes(str(msg), 'utf-8'))                   # __TODO_ADJUST__ self, topic, msg, retain=False, qos=0
 
 
