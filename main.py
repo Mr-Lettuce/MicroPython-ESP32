@@ -1,3 +1,5 @@
+#Latest commit ab308aa
+
 import os
 import gc
 from AioFunctions import mqtt_connect_and_subscribe
@@ -17,10 +19,11 @@ def main():
     monitoring of MQTT connection & reconnect
     make routine persistant trough saving settings into a db
     '''
+    
     ConnectWifi()
     routine0 = Routine()
     _thread.start_new_thread(mqtt_connect_and_subscribe, ())
-    control_monitoring()
+    control_monitoring(routine0.temperature)
     
     
 if __name__ == "__main__":
