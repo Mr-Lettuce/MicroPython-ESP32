@@ -24,13 +24,36 @@ os.environ['AIO_SUB_FEED'] = [ 'esp-actions.cmd' ]
 os.environ['AIO_REP_FEED'] = [ 'reports.humidity', 'reports.temperature', 'esp-actions.summary']
 
 # __HARDWARE_ASSIGNMENT__
-os.environ['DHT_PIN']           = 36
-os.environ['WATER_PROBE_PIN']   = 39
-os.environ['SINK_PROBE_PIN']    = 34
-os.environ['PELT_PIN']          = 35
-os.environ['HEAT_PIN']          = 32
-os.environ['COOLER_PIN']        = 33
-os.environ['VENTILATION_PIN']   = 25
-os.environ['R_LED_PIN']         = 26
-os.environ['G_LED_PIN']         = 27
-os.environ['B_LED_PIN']         = 14
+os.environ['DHT_PIN']           = 39
+os.environ['WATER_PROBE_PIN']   = 34
+os.environ['SINK_PROBE_PIN']    = 35
+os.environ['PELT_PIN']          = 32
+os.environ['HEAT_PIN']          = 33
+os.environ['COOLER_PIN']        = 25
+os.environ['VENTILATION_PIN']   = 26
+os.environ['R_LED_PIN']         = 27
+os.environ['G_LED_PIN']         = 14
+os.environ['B_LED_PIN']         = 12
+
+'''
+Pines PWM
+
+13
+14
+15
+16
+17
+18
+19
+
+21
+22
+23
+
+25
+26
+27
+
+32
+33
+'''
