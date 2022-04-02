@@ -16,8 +16,21 @@ os.environ['SSIDPW']       ='wifi_password'
 # os.environ['AIO_SUB_FEED'] = [ feeds from where you will receive data ]
 # os.environ['AIO_REP_FEED'] = [ feeds where the data will be sent ]
 
+# __MQTT_SERVER_
 os.environ['AIO_USERNAME'] = 'adafruit_user'
 os.environ['AIO_KEY']      = 'adafruit_key'
 os.environ['AIO_CID']      = bytes('ESP32_'+ machine.unique_id(), 'utf-8')
 os.environ['AIO_SUB_FEED'] = [ 'esp-actions.cmd' ]
 os.environ['AIO_REP_FEED'] = [ 'reports.humidity', 'reports.temperature', 'esp-actions.summary']
+
+# __HARDWARE_ASSIGNMENT__
+os.environ['DHT_PIN']           = 36
+os.environ['WATER_PROBE_PIN']   = 39
+os.environ['SINK_PROBE_PIN']    = 34
+os.environ['PELT_PIN']          = 35
+os.environ['HEAT_PIN']          = 32
+os.environ['COOLER_PIN']        = 33
+os.environ['VENTILATION_PIN']   = 25
+os.environ['R_LED_PIN']         = 26
+os.environ['G_LED_PIN']         = 27
+os.environ['B_LED_PIN']         = 14
