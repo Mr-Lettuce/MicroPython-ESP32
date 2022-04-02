@@ -1,24 +1,49 @@
+import os
 import machine
 from machine import Pin, PWM, ADC
 from time import sleep
 import dht
 import math
 import gc
+import _thread
+
+os.environ['DHT_PIN'] = 12
+os.environ['WATER_PROBE_PIN'] = 13
+os.environ['SINK_PROBE_PIN'] = 14
+os.environ['PELT_PIN'] = 15
+os.environ['HEAT_PIN'] = 16
+os.environ['COOLER_PIN'] = 17
+os.environ['R_LED_PIN'] = 18
+os.environ['G_LED_PIN'] = 19
+os.environ['B_LED_PIN'] = 20
+
+
+DHT_PIN         =   os.environ.get('DHT_PIN')
+WATER_PROBE_PIN =   os.environ.get('WATER_PROBE_PIN')
+SINK_PROBE_PIN  =   os.environ.get('SINK_PROBE_PIN')
+PELT_PIN        =   os.environ.get('PELT_PIN')
+HEAT_PIN        =   os.environ.get('HEAT_PIN')
+COOLER_PIN      =   os.environ.get('COOLER_PIN')
+R_LED_PIN       =   os.environ.get('R_LED_PIN')
+G_LED_PIN       =   os.environ.get('G_LED_PIN')
+B_LED_PIN       =   os.environ.get('B_LED_PIN')
+
 
 #Sensors
-dht = dht.DHT22(machine.Pin(12))                      #os.environ.get('DHT_PIN')          # BOOT os.environ['DHT_PIN'] = 12
-water_p= ADC(Pin(xx))                                 #os.environ.get('WATER_PROBE_PIN')  # BOOT os.environ['WATER_PROBE_PIN'] = xx
-sink_p = ADC(Pin(xx))                                 #os.environ.get('SINK_PROBE_PIN')   # BOOT os.environ['SINK_PROBE_PIN'] = xx
+
+dht = dht.DHT22(machine.Pin(DHT_PIN))
+water_p= ADC(Pin(WATER_PROBE_PIN))
+sink_p = ADC(Pin(SINK_PROBE_PIN))
 
 #Actuators
-pelt = machine.PWM(Pin(13), freq=500, duty=612)       #os.environ.get('PELT_PIN')         # BOOT os.environ['PELT_PIN'] = 12
-heat = machine.PWM(Pin(XX), freq=500, duty=612)       #os.environ.get('HEAT_PIN')         # BOOT os.environ['HEAT_PIN'] = xx
-cooler = machine.PWM(Pin(XX), freq=500, duty=612)     #os.environ.get('COOLER_PIN')       # BOOT os.environ['COOLER_PIN'] = xx
+pelt = machine.PWM(Pin(PELT_PIN), freq=500, duty=612)
+heat = machine.PWM(Pin(HEAT_PIN), freq=500, duty=612)
+cooler = machine.PWM(Pin(COOLER_PIN), freq=500, duty=612)
 
 #Indicators
-#rPin = Pin(xx, Pin.OUT)                              #os.environ.get('R_LED_PIN')        # BOOT os.environ['R_LED_PIN'] = xx
-#gPin = Pin(xx, Pin.OUT)                              #os.environ.get('G_LED_PIN')        # BOOT os.environ['G_LED_PIN'] = xx
-#bPin = Pin(xx, Pin.OUT)                              #os.environ.get('B_LED_PIN')        # BOOT os.environ['B_LED_PIN'] = xx
+#rPin = Pin(R_LED_PIN, Pin.OUT)
+#gPin = Pin(G_LED_PIN, Pin.OUT)
+#bPin = Pin(B_LED_PIN, Pin.OUT)
 
 
 def threaded_monitoring():
@@ -66,9 +91,9 @@ def threaded_monitoring():
       print(f'Sink temperature: {temp_s}')
     
     if loopcount2 >= 3000:
-      if 30 < temp_s <= 55
+      if 30 < temp_s <= 55:
         cooler_set( 40 +((temp_s - 30) * 2.5 ))
-      elif temp_s > 55
+      elif temp_s > 55:
         cooler_set(100)
       else:
         cooler_set(0)
@@ -132,37 +157,28 @@ def reach_temp(temp: float):
   delta_temp = abs(float(temp - dht.temperature))
   
   if temp < d.temperature:                                        # Cooling call
-  print('Cool_that_shit!')
-  if 0.2 < delta_temp <= 5:
-      print((peltier_min_percentage + (delta_temp * peltier_levels)))
-      peltier_set((peltier_min_percentage + (delta_temp * peltier_levels)))
-  elif delta_temp > 5:
-      print((peltier_max_percentage))
-      peltier_set((peltier_max_percentage))
-  else:
-      print(f'peltier_set(0)')
-      peltier_set(0)
+      print('Cool_that_shit!')
+      if 0.2 < delta_temp <= 5:
+          print((peltier_min_percentage + (delta_temp * peltier_levels)))
+          peltier_set((peltier_min_percentage + (delta_temp * peltier_levels)))
+      elif delta_temp > 5:
+          print((peltier_max_percentage))
+          peltier_set((peltier_max_percentage))
+      else:
+          print(f'peltier_set(0)')
+          peltier_set(0)
 
-if temp > d.temperature:                                          # Heating call
-  print('Heat_that_shit!')
-  if 0.2 < delta_temp <= 5:
-      print((heater_min_percentage + (delta_temp * heater_levels)))
-      heater_set((heater_min_percentage + (delta_temp * heater_levels)))
-  elif delta_temp > 5:
-      print(heater_max_percentage)
-      heater_set(heater_max_percentage)
-  else:
-      print(f'heater_set(0)')
-      heater-set(0)
-
-
-# __DEBUG__
-print(f'd.temperature = {d.temperature},
-      delta_temp = {delta_temp},
-      d.humidity = {d.humidity},
-      peltier_set(peltier_min_percentage + (delta_temp * peltier_levels)) = {peltier_set(peltier_min_percentage + (delta_temp * peltier_levels))},
-      heater_set(heater_min_percentage + (delta_temp * heater_levels)) = {heater_set(heater_min_percentage + (delta_temp * heater_levels))},
-      adapt_cooler(20 + (delta_temp * 8)) = {adapt_cooler(20 + (delta_temp * 8))}')
+  if temp > d.temperature:                                          # Heating call
+      print('Heat_that_shit!')
+      if 0.2 < delta_temp <= 5:
+          print((heater_min_percentage + (delta_temp * heater_levels)))
+          heater_set((heater_min_percentage + (delta_temp * heater_levels)))
+      elif delta_temp > 5:
+          print(heater_max_percentage)
+          heater_set(heater_max_percentage)
+      else:
+          print(f'heater_set(0)')
+          heater-set(0)
 
 
 #def adapt_light():
@@ -184,5 +200,5 @@ print(f'd.temperature = {d.temperature},
   '''
 
 
-if __name__='__main__':
-  
+if __name__=='__main__':
+    _thread.start_new_thread(threaded_monitoring, ())
