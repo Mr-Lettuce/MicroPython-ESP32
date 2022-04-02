@@ -7,16 +7,6 @@ import math
 import gc
 import _thread
 
-os.environ['DHT_PIN'] = 12
-os.environ['WATER_PROBE_PIN'] = 13
-os.environ['SINK_PROBE_PIN'] = 14
-os.environ['PELT_PIN'] = 15
-os.environ['HEAT_PIN'] = 16
-os.environ['COOLER_PIN'] = 17
-os.environ['R_LED_PIN'] = 18
-os.environ['G_LED_PIN'] = 19
-os.environ['B_LED_PIN'] = 20
-
 
 DHT_PIN         =   os.environ.get('DHT_PIN')
 WATER_PROBE_PIN =   os.environ.get('WATER_PROBE_PIN')
@@ -24,6 +14,7 @@ SINK_PROBE_PIN  =   os.environ.get('SINK_PROBE_PIN')
 PELT_PIN        =   os.environ.get('PELT_PIN')
 HEAT_PIN        =   os.environ.get('HEAT_PIN')
 COOLER_PIN      =   os.environ.get('COOLER_PIN')
+VENTILATION_PIN =   os.environ.get('VENTILATION_PIN')
 R_LED_PIN       =   os.environ.get('R_LED_PIN')
 G_LED_PIN       =   os.environ.get('G_LED_PIN')
 B_LED_PIN       =   os.environ.get('B_LED_PIN')
@@ -186,6 +177,10 @@ def reach_temp(temp: float):
   check the time cicle set and adjust the PWM output to be adaptative in the closeness to the starting/finishing time
   '''
 
+#def ventilation_routine():
+  '''
+  control the coller trough PWM
+  '''
 
 #def rgb_indicator(state):
   '''
