@@ -1,3 +1,5 @@
+#Latest commit f614488
+
 import os
 import machine
 from machine import Pin, PWM, ADC
@@ -6,6 +8,7 @@ import dht
 import math
 import gc
 import _thread
+from AioFunctions import send_mqtt
 
 
 DHT_PIN         =   os.environ.get('DHT_PIN')
@@ -22,15 +25,15 @@ B_LED_PIN       =   os.environ.get('B_LED_PIN')
 
 #Sensors
 
-dht = dht.DHT22(machine.Pin(DHT_PIN))
+#dht = dht.DHT22(machine.Pin(DHT_PIN))
 water_p= ADC(Pin(WATER_PROBE_PIN))
 sink_p = ADC(Pin(SINK_PROBE_PIN))
 
 #Actuators
-pelt        = machine.PWM(Pin(PELT_PIN), freq=500, duty=2)
-heat        = machine.PWM(Pin(HEAT_PIN), freq=500, duty=2)
-cooler      = machine.PWM(Pin(COOLER_PIN), freq=500, duty=2)
-ventilation = machine.PWM(Pin(VENTILATION_PIN), freq=500, duty=2)
+pelt        = machine.PWM(Pin(PELT_PIN), freq=500, duty=0)
+heat        = machine.PWM(Pin(HEAT_PIN), freq=10, duty=0)
+cooler      = machine.PWM(Pin(COOLER_PIN), freq=500, duty=0)
+ventilation = machine.PWM(Pin(VENTILATION_PIN), freq=500, duty=0)
 
 #Indicators
 #rPin = Pin(R_LED_PIN, Pin.OUT)
@@ -38,7 +41,7 @@ ventilation = machine.PWM(Pin(VENTILATION_PIN), freq=500, duty=2)
 #bPin = Pin(B_LED_PIN, Pin.OUT)
 
 
-def control_monitoring():
+def control_monitoring(target_temp: float):
   '''
   This function sense the temperature and humidity of all sensors and control the sink temperature trough PWM and a cooler.
   Also control the temperature needs comparing to the routine.
@@ -48,64 +51,78 @@ def control_monitoring():
   start = time.ticks_ms()
   global temp_w
   global temp_s
-  rs = 100000  #150000                            # Resistor in the circuit board, same for water and sink probe
-  vcc = 3.3                                       # Operating voltage
+  temp_w = 0.0
+  temp_s = 0.0
+  global val_w
+  global val_s
+  val_w = 0
+  val_s = 0
+    
+  rs = 68000                                          # Resistor in the circuit board, same for water and sink probe
+  vcc = 3.3                                           # Operating voltage
+  loopcount1 = 0
+  loopcount2 = 0
+  loopcount3 = 0
   while True:
     delta = time.ticks_diff(time.ticks_ms(), start)
-    dht.measure()                                     # sense DHT
-    val_w = 0                                         # smoothadc():
-    val_s = 0
-    loopcount1 = 0
-    loopcount2 = 0
-    loopcount3 = 0
-    if delta - start // 2 == 0:                       # Sense the probes every 2 miliseconds
+    loopcount2 += 1
+    loopcount3 += 1
+    #dht.measure()                                    # sense DHT
+    
+    if delta % 2 == 0:                                # Sense the probes every 2 miliseconds
         val_w += water_p.read_uv()
         val_s += sink_p.read_uv()
-        loopcount1+= 1
+        loopcount1 += 1
     if loopcount1 >= 1000:                            # Average value from 1000 samples
-      val_w = val_w / loopcount;
-      val_s = val_s / loopcount;
+        val_w = val_w / loopcount1;
+        val_s = val_s / loopcount1;
       
-      v_ntc_w = val_w() * 0.000001                    # temp_ntc():
-      v_ntc_s = val_s() * 0.000001
-      r_ntc_w = (rs * v_ntc_w) / (vcc - v_ntc_w)
-      r_ntc_s = (rs * v_ntc_s) / (vcc - v_ntc_s)
-      r_ntc_w = math.log(r_ntc_w)
-      r_ntc_s = math.log(r_ntc_s)
-      temp_w = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * r_ntc_w * r_ntc_w ))* r_ntc_w )
-      temp_w = temp_w - 273.15
-      temp_s = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * r_ntc_s * r_ntc_s ))* r_ntc_s )
-      temp_s = temp_s - 273.15
+        v_ntc_w = val_w * 0.000001                    # temp_ntc():
+        v_ntc_s = val_s * 0.000001
+        r_ntc_w = (rs * v_ntc_w) / (vcc - v_ntc_w)
+        r_ntc_s = (rs * v_ntc_s) / (vcc - v_ntc_s)
+        r_ntc_w = math.log(r_ntc_w)
+        r_ntc_s = math.log(r_ntc_s)
+        temp_w = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * r_ntc_w * r_ntc_w ))* r_ntc_w )
+        temp_w = temp_w - 273.15
+        temp_s = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * r_ntc_s * r_ntc_s ))* r_ntc_s )
+        temp_s = temp_s - 273.15
       
-      loopcount1 = 0
+        loopcount1 = 0
     
-      print(f'DHT = Temperature: {d.temperature}, Humidity: {d.humidity}')
-      print(f'Water temperature: {temp_w}')
-      print(f'Sink temperature: {temp_s}')
+        #print(f'DHT = Temperature: {d.temperature}, Humidity: {d.humidity}')
+        print(f'Water temperature: {temp_w}')
+        print(f'Sink temperature: {temp_s}')
     
     if loopcount2 >= 3000:
       if 30 < temp_s <= 55:
-        cooler_set( 40 +((temp_s - 30) * 2.5 ))
+        cooler_set( 60 +((temp_s - 30) * 1.66 ))
       elif temp_s > 55:
         cooler_set(100)
       else:
-        cooler_set(0)
-      reach_temp(routine0.temperature)
+        cooler.duty(0)
+      reach_temp(target_temp)
       loopcount2 = 0
     
-    if loopcount3 >= 1000:
-        send_mqtt('reports.temperature', d.temperature )
-        send_mqtt('reports.humidity', d.humidity )
+    if loopcount3 >= 5000:
+        send_mqtt('reports.temperature', temp_w)#d.temperature )
+        send_mqtt('reports.humidity', temp_s)#d.humidity )
+        loopcount3 = 0
     
     gc.collect()
     
     
 def peltier_set(percentage: float):
+    print(f'__DEBUG_PELTIER_SET__ {percentage}')
     pelt.duty_u16(round((percentage*65535)/100))       # Set duty to desired percentage
     
+def heater_set(percentage: float):
+    print(f'__DEBUG_HEATER_SET__ {percentage}')  
+    heat.duty_u16(round((percentage*65535)/100))       # Set duty to desired percentage
     
 def cooler_set(percentage: float):
-    cooler.duty_u16(round((percentage*65535)/100))     # Set duty to desired percentage
+    print(f'__DEBUG_COOLER_SET__ {percentage}')    
+    cooler.duty_u16(round((percentage*65535)/100))       # Set duty to desired percentage
     
     
 def reach_temp(temp: float):
@@ -144,6 +161,7 @@ def reach_temp(temp: float):
   24              28.5            4.5            22.5
   24              29              5              25
   '''
+  global temp_w
   
   heater_min_percentage = 0                                       # Adjust hardware parameters
   heater_max_percentage = 50
@@ -151,34 +169,36 @@ def reach_temp(temp: float):
   peltier_max_percentage = 80
 
   peltier_levels = float((peltier_max_percentage - peltier_min_percentage) / 5)
-  heater_levels = float((heater_max_percentage - heater_min_percentage) / 10)
+  heater_levels = float((heater_max_percentage - heater_min_percentage) / 8)
   
-  dht.measure()
-  delta_temp = abs(float(temp - dht.temperature))
+  #dht.measure()
+  delta_temp = abs(float(temp - temp_w))#dht.temperature))
   
-  if temp < d.temperature:                                        # Cooling call
-      print('Cool_that_shit!')
+  if temp < temp_w:        #d.temperature:                                        # Cooling call
+      print('__DEBUG__ Cool_that_shit!')
       if 0.2 < delta_temp <= 5:
-          print((peltier_min_percentage + (delta_temp * peltier_levels)))
-          peltier_set((peltier_min_percentage + (delta_temp * peltier_levels)))
+          peltier_set(peltier_min_percentage + (delta_temp * peltier_levels))
+          heat.duty(0)
       elif delta_temp > 5:
-          print((peltier_max_percentage))
-          peltier_set((peltier_max_percentage))
+          peltier_set(peltier_max_percentage)
+          heat.duty(0)
       else:
-          print(f'peltier_set(0)')
-          peltier_set(0)
+          print('pelt.deinit')
+          pelt.duty(0)
+          heat.duty(0)
 
-  if temp > d.temperature:                                          # Heating call
-      print('Heat_that_shit!')
-      if 0.2 < delta_temp <= 5:
-          print((heater_min_percentage + (delta_temp * heater_levels)))
-          heater_set((heater_min_percentage + (delta_temp * heater_levels)))
+  if temp > temp_w:       #d.temperature:                                          # Heating call
+      print('__DEBUG__ Heat_that_shit!')
+      if 0.1 < delta_temp <= 5:
+          heater_set(heater_min_percentage + (delta_temp * heater_levels))
+          pelt.duty(0)
       elif delta_temp > 5:
-          print(heater_max_percentage)
           heater_set(heater_max_percentage)
+          pelt.duty(0)
       else:
-          print(f'heater_set(0)')
-          heater-set(0)
+          print('heater.deinit')
+          heat.duty(0)
+          pelt.duty(0)
 
 
 #def adapt_light():
@@ -205,4 +225,4 @@ def reach_temp(temp: float):
 
 
 if __name__=='__main__':
-    control_monitoring()
+    control_monitoring(24)
