@@ -57,6 +57,7 @@ def control_monitoring():
     val_s = 0
     loopcount1 = 0
     loopcount2 = 0
+    loopcount3 = 0
     if delta - start // 2 == 0:                       # Sense the probes every 2 miliseconds
         val_w += water_p.read_uv()
         val_s += sink_p.read_uv()
@@ -91,6 +92,11 @@ def control_monitoring():
         cooler_set(0)
       reach_temp(routine0.temperature)
       loopcount2 = 0
+    
+    if loopcount3 >= 1000:
+        send_mqtt('reports.temperature', d.temperature )
+        send_mqtt('reports.humidity', d.humidity )
+    
     gc.collect()
     
     
@@ -199,4 +205,4 @@ def reach_temp(temp: float):
 
 
 if __name__=='__main__':
-    _thread.start_new_thread(control_monitoring, ())
+    control_monitoring()
