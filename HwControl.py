@@ -66,12 +66,10 @@ def threaded_monitoring():
       print(f'Sink temperature: {temp_s}')
     
     if loopcount2 >= 3000:
-      if temp_s > 50:
+      if 30 < temp_s <= 55
+        cooler_set( 40 +((temp_s - 30) * 2.5 ))
+      elif temp_s > 55
         cooler_set(100)
-      if 50 > temp_s > 40:
-        cooler_set(80)
-      if 40 > temp_s > 30:
-        cooler_set(60)
       else:
         cooler_set(0)
     gc.collect()
