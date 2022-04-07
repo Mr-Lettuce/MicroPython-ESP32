@@ -1,13 +1,9 @@
-#Latest commit ab308aa
+#Latest commit cd1eeca
 
 import os
-import gc
 from AioFunctions import mqtt_connect_and_subscribe
 from HwControl import control_monitoring
 from WifiConnect import ConnectWifi
-from MiscFunctions import init_routine
-from MiscFunctions import Routine
-import MiscFunctions
 import _thread
 
 
@@ -21,11 +17,10 @@ def main():
     '''
     
     ConnectWifi()
-    routine0 = Routine()
+    #routine0 = Routine()
     _thread.start_new_thread(mqtt_connect_and_subscribe, ())
-    control_monitoring(routine0.temperature)
-    
+    control_monitoring()
+
     
 if __name__ == "__main__":
-    init_routine()
     main()
