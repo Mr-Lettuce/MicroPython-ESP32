@@ -1,3 +1,5 @@
+#Latest commit 72c6497
+
 import os
 import gc
 from time import sleep
@@ -5,21 +7,11 @@ from machine import Pin
 import btree
 
 
-def init_routine():
-    ''' __INIT_ROUTINE__
-        Just a phisical indication of the main script running with onboard Led
-    '''
-    led = Pin(2, Pin.OUT)
-    led.value(1)
-    sleep(0.5)
-    led.value(0)
-    gc.collect()
-
 class Routine:
     def __init__(
         self,
-        temperature      =   '24',
-        humidity         =   '60',
+        temperature      =   24.0,
+        humidity         =   60.0,
         ventilation      =   '4:4',
         start_light      =   '08:00',
         end_light        =   '18:00',
@@ -56,8 +48,26 @@ def read_db(key):
     except OSError:
         f = open("routine_db", "w+b")
     db = btree.open(f)
-    print(f'Value stored in routine database for {key} is {db[key]}')
+    #print(f'Value stored in routine database for {key} is {db[key]}')
+    val = db[key]
+    #for k in db:
+    #    print(k)
+    db.close()
+    f.close()
+    return float(val)
+
+
+def show_db():
+    try:
+        f = open("routine_db", "r+b")
+    except OSError:
+        f = open("routine_db", "w+b")
+    db = btree.open(f)
     for k in db:
         print(k)
     db.close()
     f.close()
+
+
+if __name__=='__main__':
+    print('done MiscF')
