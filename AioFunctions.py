@@ -1,6 +1,8 @@
-#Latest commit e663214
+#Latest commit 4aafa8b
 
 from umqtt.robust import MQTTClient
+from MiscFunctions import save_to_db
+from MiscFunctions import read_db
 from time import sleep
 import os
 import sys
@@ -71,10 +73,13 @@ def mqtt_connect_and_subscribe():                                       # __WORK
         try:                                                            # check_mqtt() function
             client.check_msg()
             gc.collect()
-        except:
+        except OSError as error:
+            print(error)
+            print('MQTT Connection failed, trying to reconnect...')
             client.disconnect()
             gc.collect()
-            sys.exit()
+            mqtt_connect_and_subscribe()
+            continue
         sleep(1)
 
 
@@ -155,11 +160,17 @@ def set_value(attr_value):                                              # Analiz
         key          = attr_value.split('=')[0]
         value        = attr_value.split('=')[1]
         send_mqtt('esp-actions.summary', f'Set new parameter: {key} = {value}')
-        routine0.change_value(key, value)
+        #routine0.change_value(key, value)
+        save_to_db(f'r0_{key}', str(value))
     else:
         print('No "cmd" format found in message')
         send_mqtt('esp-actions.summary', 'Not set format found in message')
     gc.collect()
+    
+    
+def summary_msg(msg: str):
+    send_mqtt('esp-actions.summary', msg)
+    print(msg)
 
 
 def threaded_mqtt():
@@ -168,6 +179,7 @@ def threaded_mqtt():
 
 
 if __name__=='__main__':
-    from MiscFunctions import Routine
-    routine0 = Routine()
-    threaded_mqtt()
+    #from MiscFunctions import Routine
+    #routine0 = Routine()
+    #threaded_mqtt()
+    print('done_aioF')
