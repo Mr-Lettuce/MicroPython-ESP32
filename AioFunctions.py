@@ -118,6 +118,8 @@ def remote_cmd(received_cmd):
         
         do.reset                                                        # Reset ESP32
         
+        exec.something                                                  # Execute something directly
+        
         TODO:
         set.date=DD:MM:YYYY                                             # Set Date to DS3231
         set.routine=x:                                                  # Set routine like: _routine_number_ and it will wait for following parameters:
@@ -139,6 +141,8 @@ def remote_cmd(received_cmd):
             set_value(cmd)                                              # Call function for set new values
         if category == 'do':
             machine_cmd(cmd)                                            # Call funcion for execute cmd for ESP control
+        if category == 'exec':
+            exec(str(cmd))                                              # Pass the msg directly to exec function
         gc.collect()
     else:
         print('Not cmd format found in message')
