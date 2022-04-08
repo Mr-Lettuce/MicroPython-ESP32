@@ -243,9 +243,9 @@ def reach_temp(temp: float):
   '''
 
 
-def sync_db():
-    #global routine0
-    routine0.temperature = read_db('r0_temperature')
+def sync_db(r_num: int): 
+    if r_num # use exec('expr as str')
+    routine0.temperature = read_db('r0.temperature')
 
 if __name__=='__main__':
     #control_monitoring(22)
