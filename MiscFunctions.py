@@ -54,7 +54,10 @@ def read_db(key):
     #    print(k)
     db.close()
     f.close()
-    return float(val)
+    if key.split('.')[-1] == 'temperature' or key.split('.')[-1] == 'humidity':
+        return float(val)
+    else:
+        return str(val)
 
 
 def show_db():
