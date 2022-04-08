@@ -243,10 +243,12 @@ def reach_temp(temp: float):
   '''
 
 
-def sync_db(r_num: int): 
-    if r_num # use exec('expr as str')
-    routine0.temperature = read_db('r0.temperature')
+def sync_db(r_num: int):                              # Accept argument as "routine0", "routine1", etc
+    params = ( 'temperature', 'humidity', 'ventilation', 'start_light', 'end_light', 'start_date', 'end_date' )
+    for i in params:
+      exec( f'{r_num}.{i} = read_db({r_num}.{i})')
+      exec(f'print({r_num}.{i})')
+    #routine0.temperature = read_db('r_num.temperature')
 
 if __name__=='__main__':
-    #control_monitoring(22)
-    print('done')
+    print('done HwControl')
