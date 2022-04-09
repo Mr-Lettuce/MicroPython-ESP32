@@ -69,10 +69,13 @@ def mqtt_connect_and_subscribe():                                       # __WORK
         client.subscribe(current_feed)                                  # __TODO_ADJUST__ self, topic, qos=0
         print(f'Subscribed to feed {current_feed}')
     gc.collect()
+    start = time.ticks_ms()
     while True:
+        delta = time.ticks_diff(time.ticks_ms(), start)
         try:                                                            # check_mqtt() function
-            client.check_msg()
-            gc.collect()
+            if delta >= 100:
+                client.wait_msg()
+                gc.collect()
         except OSError as error:
             print(error)
             print('MQTT Connection failed, trying to reconnect...')
@@ -80,7 +83,6 @@ def mqtt_connect_and_subscribe():                                       # __WORK
             gc.collect()
             mqtt_connect_and_subscribe()
             continue
-        sleep(1)
 
 
 def send_mqtt(topic, msg):                                              # to_feed = b'Daddy_mdr/feeds/esp-actions.summary' , msg = holaa
