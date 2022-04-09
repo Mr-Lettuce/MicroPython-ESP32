@@ -12,7 +12,7 @@ class Routine:
         self,
         temperature      =   24.0,
         humidity         =   60.0,
-        ventilation      =   '4:4',
+        ventilation      =   10,
         start_light      =   '08:00',
         end_light        =   '18:00',
         start_date       =   '24:03:2022',
