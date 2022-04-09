@@ -1,5 +1,10 @@
 #Latest commit fed52db
 
+'''
+This script manages data of routines and hardware outputs of the ESP32.
+Here we have the process of data stored in the database, synced in local variables to get the parameters needed for operation.
+All routines are stored in DB and then are selected as current 'schedule' based on dates defined in each one.
+'''
 import os
 import machine
 import network
@@ -48,7 +53,7 @@ ventilation = machine.PWM(Pin(VENTILATION_PIN), freq=500, duty=0)
 #bPin = Pin(B_LED_PIN, Pin.OUT)
 
 
-routine0 = Routine()                        # Initialization for routine 0 
+routine0 = Routine()                                  # Initialization for routine 0 
 
 
 
@@ -77,6 +82,7 @@ def control_monitoring():
   loopcount2 = 0                                      # Count for cooler response
   loopcount3 = 0                                      # Count for reports to MQTT and adjust for new settings
   while True:
+    schedule = routine0                               # __TODO__ 'routine0' must change to the current routine to folow
     delta = time.ticks_diff(time.ticks_ms(), start)
     loopcount2 += 1
     loopcount3 += 1
@@ -111,19 +117,19 @@ def control_monitoring():
         cooler_set(100)
       else:
         cooler.duty(0)
+      ventilation_set(schedule.ventilation)
       loopcount2 = 0
     
     if loopcount3 >= 5000:
         send_mqtt('reports.temperature', temp_w)#d.temperature )
         send_mqtt('reports.humidity', temp_s)#d.humidity )
-        #print(f'DHT = Temperature: {d.temperature}, Humidity: {d.humidity}')
         #summary_msg(f'Water temperature:        {temp_w}')
         #summary_msg(f'Sink temperature:         {temp_s}')
         loopcount3 = 0
         sync_db()
-        reach_temp(routine0.temperature)        
-        #print(f'routine0.temperature = {routine0.temperature}')
-        summary_msg(f'routine0.temperature = {routine0.temperature}')
+        reach_temp(schedule.temperature)        
+        #print(f'schedule.temperature = {schedule.temperature}')
+        summary_msg(f'schedule.temperature = {schedule.temperature}')
         
         if network.WLAN(network.STA_IF).isconnected() != True:
                 ConnectWifi()
@@ -145,9 +151,9 @@ def cooler_set(percentage: float):
     cooler.duty_u16(round((percentage*65535)/100))     # Set duty to desired percentage
     #cooler.duty_u16(65535)
     
-def ventilation_set():   #(percentage: float):
+def ventilation_set(percentage: float):
     summary_msg('__DEBUG__VENTILATION__ON__')
-    cooler.duty_u16(round((50*65535)/100))             # Set duty to desired percentage
+    cooler.duty_u16(round((percentage*65535)/100))     # Set duty to desired percentage
     
 def reach_temp(temp: float):
   '''
@@ -186,7 +192,7 @@ def reach_temp(temp: float):
   24              29              5              25
   '''
   global temp_w  
-  heater_min_percentage = 0                                       # Adjust hardware parameters
+  heater_min_percentage = 0                                                       # Adjust hardware parameters
   heater_max_percentage = 50
   peltier_min_percentage = 40
   peltier_max_percentage = 80
@@ -196,7 +202,6 @@ def reach_temp(temp: float):
   
   #dht.measure()
   delta_temp = abs(float(temp - temp_w))#dht.temperature))
-  
   if temp < temp_w:        #d.temperature:                                        # Cooling call
       if 0.2 < delta_temp <= 5:
           peltier_set(peltier_min_percentage + (delta_temp * peltier_levels))
@@ -225,10 +230,6 @@ def reach_temp(temp: float):
   check the time cicle set and adjust the PWM output to be adaptative in the closeness to the starting/finishing time
   '''
 
-#def ventilation_routine():
-  '''
-  control the coller trough PWM
-  '''
 
 #def rgb_indicator(state):
   '''
@@ -243,7 +244,7 @@ def reach_temp(temp: float):
   '''
 
 
-def sync_db(r_num: int):                              # Accept argument as "routine0", "routine1", etc
+def sync_db(r_num: int):                              # Accepts argument as "routine0", "routine1", etc
     params = ( 'temperature', 'humidity', 'ventilation', 'start_light', 'end_light', 'start_date', 'end_date' )
     for i in params:
       exec( f'{r_num}.{i} = read_db({r_num}.{i})')
