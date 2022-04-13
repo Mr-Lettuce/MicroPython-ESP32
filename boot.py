@@ -27,13 +27,14 @@ os.environ['AIO_REP_FEED'] = [ 'reports.humidity', 'reports.temperature', 'esp-a
 os.environ['DHT_PIN']           = 11 #39 x
 os.environ['WATER_PROBE_PIN']   = 36 #34 -*
 os.environ['SINK_PROBE_PIN']    = 39 #35 -*
-os.environ['PELT_PIN']          = 33 #32 -
-os.environ['HEAT_PIN']          = 25 #33 -
-os.environ['COOLER_PIN']        = 35 #25 -
-os.environ['VENTILATION_PIN']   = 32 #26 -
-os.environ['LIGHT_PIN']         = 34 #   -
-os.environ['HUMID_PIN']         = 26 #   x
-os.environ['R_LED_PIN']         = 6  #27 
+
+os.environ['LIGHT_PIN']         = 32 #   -
+os.environ['COOLER_PIN']        = 33 #35 #25 - Pins 34-39 are input only, and also do not have internal pull-up resistors
+os.environ['VENTILATION_PIN']   = 25 #32 #26 -
+os.environ['PELT_PIN']          = 26 #33 #32 -
+os.environ['HEAT_PIN']          = 27 #25 #33 -
+os.environ['HUMID_PIN']         = 14 #26 #   x
+os.environ['R_LED_PIN']         = 6  #27 Pins 6, 7, 8, 11, 16, and 17 are used for connecting the embedded flash, and are not recommended for other uses
 os.environ['G_LED_PIN']         = 7  #14 
 os.environ['B_LED_PIN']         = 8  #12 
 
