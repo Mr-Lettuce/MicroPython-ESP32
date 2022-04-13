@@ -1,4 +1,4 @@
-#Latest commit fed52db
+# Latest commit 8d3aaaf
 
 '''
 This script manages data of routines and hardware outputs of the ESP32.
@@ -53,7 +53,7 @@ ventilation = machine.PWM(Pin(VENTILATION_PIN), freq=500, duty=0)
 #bPin = Pin(B_LED_PIN, Pin.OUT)
 
 
-routine0 = Routine()                                  # Initialization for routine 0 
+r0 = Routine()                                  # Initialization for routine 0 
 
 
 
@@ -79,10 +79,11 @@ def control_monitoring():
   rs = 68000                                          # Resistor in the circuit board, same for water and sink probe
   vcc = 3.3                                           # Operating voltage
   loopcount1 = 0                                      # Count for ADC sensing
-  loopcount2 = 0                                      # Count for cooler response
-  loopcount3 = 0                                      # Count for reports to MQTT and adjust for new settings
+  loopcount2 = 14500                                  # Count for cooler response
+  loopcount3 = 4500                                   # Count for reports to MQTT and adjust for new settings
   while True:
-    schedule = routine0                               # __TODO__ 'routine0' must change to the current routine to folow
+    schedule = r0                                     # __TODO__ 'routine0' must change to the current routine to folow
+    gc.collect()
     delta = time.ticks_diff(time.ticks_ms(), start)
     loopcount2 += 1
     loopcount3 += 1
@@ -111,14 +112,18 @@ def control_monitoring():
         delta = 0    
     
     if loopcount2 >= 15000:
-      if 30 < temp_s <= 55:
-        cooler_set( 60 +((temp_s - 30) * 1.66 ))
-      elif temp_s > 55:
-        cooler_set(100)
-      else:
-        cooler.duty(0)
-      ventilation_set(schedule.ventilation)
-      loopcount2 = 0
+        if 30 < temp_s <= 55:
+            cooler_set( 60 +((temp_s - 30) * 1.66 ))
+        elif temp_s > 55:
+            cooler_set(100)
+        else:
+            cooler.duty(0)
+        #ventilation_set(schedule.ventilation)                # __TODO__ FIX_NOT_WORKING: MemoryError: memory allocation failed, allocating 327676 bytes
+      
+        if network.WLAN(network.STA_IF).isconnected() != True:
+            ConnectWifi()
+                
+        loopcount2 = 0
     
     if loopcount3 >= 5000:
         send_mqtt('reports.temperature', temp_w)#d.temperature )
@@ -126,13 +131,12 @@ def control_monitoring():
         #summary_msg(f'Water temperature:        {temp_w}')
         #summary_msg(f'Sink temperature:         {temp_s}')
         loopcount3 = 0
-        sync_db()
+        sync_db('r0')
         reach_temp(schedule.temperature)        
         #print(f'schedule.temperature = {schedule.temperature}')
         summary_msg(f'schedule.temperature = {schedule.temperature}')
+        gc.collect()
         
-        if network.WLAN(network.STA_IF).isconnected() != True:
-                ConnectWifi()
             
     
     gc.collect()
@@ -141,19 +145,20 @@ def control_monitoring():
 def peltier_set(percentage: float):
     summary_msg(f'__DEBUG_PELTIER_SET__ {percentage}')
     pelt.duty_u16(round((percentage*65535)/100))       # Set duty to desired percentage
+    gc.collect()
     
 def heater_set(percentage: float):
     summary_msg(f'__DEBUG_HEATER_SET__ {percentage}')  
     heat.duty_u16(round((percentage*65535)/100))       # Set duty to desired percentage
+    gc.collect()
     
 def cooler_set(percentage: float):
-    #summary_msg(f'__DEBUG_COOLER_SET__ {percentage}')    
     cooler.duty_u16(round((percentage*65535)/100))     # Set duty to desired percentage
-    #cooler.duty_u16(65535)
+    gc.collect()
     
 def ventilation_set(percentage: float):
-    summary_msg('__DEBUG__VENTILATION__ON__')
     cooler.duty_u16(round((percentage*65535)/100))     # Set duty to desired percentage
+    gc.collect()
     
 def reach_temp(temp: float):
   '''
@@ -244,12 +249,12 @@ def reach_temp(temp: float):
   '''
 
 
-def sync_db(r_num: int):                              # Accepts argument as "routine0", "routine1", etc
+def sync_db(r_num: str):                              # Accepts argument as "r0", "r1", etc
     params = ( 'temperature', 'humidity', 'ventilation', 'start_light', 'end_light', 'start_date', 'end_date' )
     for i in params:
-      exec( f'{r_num}.{i} = read_db({r_num}.{i})')
-      exec(f'print({r_num}.{i})')
-    #routine0.temperature = read_db('r_num.temperature')
+      exec( f'{r_num}.{i} = read_db("{r_num}_{i}")')
+      #exec(f'print({r_num}.{i})')
+
 
 if __name__=='__main__':
     print('done HwControl')
