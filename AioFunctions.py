@@ -1,4 +1,4 @@
-# Latest commit 97eea0a
+# Latest commit 9017303
 
 from machine import RTC
 from umqtt.simple import MQTTClient
@@ -146,6 +146,8 @@ def remote_cmd(received_cmd):
     '''
     Get the string message received and search for setting formatted as:
 
+        select.rx                                                       # Select routine to apply
+
         set.humidity=xx                                                 # Set target humidity
         set.temperature=xx                                              # Set target temperature
         
@@ -178,6 +180,9 @@ def remote_cmd(received_cmd):
             machine_cmd(cmd)                                            # Call funcion for execute cmd for ESP control
         if category == 'exec':
             exec(str(cmd))                                              # Pass the msg directly to exec function
+        if category == 'select':
+            save_to_db('sel_r', cmd)
+            send_mqtt('esp-actions.summary', 'Selected active routine: {cmd}')
         gc.collect()
     else:
         print('Not cmd format found in message')
@@ -222,3 +227,4 @@ if __name__=='__main__':
     #routine0 = Routine()
     #threaded_mqtt()
     print('done_aioF')
+
