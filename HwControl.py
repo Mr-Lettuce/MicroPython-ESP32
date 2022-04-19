@@ -13,6 +13,7 @@ import dht
 import math
 import gc
 import _thread
+from machine import RTC
 from MiscFunctions import save_to_db
 from MiscFunctions import read_db
 from machine import Pin, PWM, ADC
@@ -54,7 +55,7 @@ ventilation = machine.PWM(Pin(VENTILATION_PIN), freq=500, duty=0)
 
 
 r0 = Routine()                                  # Initialization for routine 0 
-
+rtc = RTC()
 
 
 def control_monitoring():
@@ -79,8 +80,8 @@ def control_monitoring():
   rs = 68000                                          # Resistor in the circuit board, same for water and sink probe
   vcc = 3.3                                           # Operating voltage
   loopcount1 = 0                                      # Count for ADC sensing
-  loopcount2 = 14500                                  # Count for cooler response
-  loopcount3 = 4500                                   # Count for reports to MQTT and adjust for new settings
+  loopcount2 = 0                                      # Count for cooler response
+  loopcount3 = 0                                      # Count for reports to MQTT and adjust for new settings
   while True:
     schedule = r0                                     # __TODO__ 'routine0' must change to the current routine to folow
     gc.collect()
@@ -107,11 +108,11 @@ def control_monitoring():
         temp_w = temp_w - 273.15
         temp_s = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * r_ntc_s * r_ntc_s ))* r_ntc_s )
         temp_s = temp_s - 273.15
-      
         loopcount1 = 0
-        delta = 0    
-    
-    if loopcount2 >= 15000:
+        delta = 0
+
+
+    if loopcount2 >= 30000:
         if 30 < temp_s <= 55:
             cooler_set( 60 +((temp_s - 30) * 1.66 ))
         elif temp_s > 55:
@@ -121,35 +122,35 @@ def control_monitoring():
         #ventilation_set(schedule.ventilation)                # __TODO__ FIX_NOT_WORKING: MemoryError: memory allocation failed, allocating 327676 bytes
       
         if network.WLAN(network.STA_IF).isconnected() != True:
-            ConnectWifi()
-                
+            try:
+                ConnectWifi()
+            except Exception as e:
+                print('Wifi not connected, trying to reconect in next loop.{}{}'.format(type(e).__name__, e))
+                print(rtc.datetime())
+                network.WLAN(network.STA_IF).active(False)
         loopcount2 = 0
+
     
     if loopcount3 >= 5000:
+        sync_db('r0')
+        reach_temp(schedule.temperature)
+        loopcount3 = 0
         send_mqtt('reports.temperature', temp_w)#d.temperature )
         send_mqtt('reports.humidity', temp_s)#d.humidity )
-        #summary_msg(f'Water temperature:        {temp_w}')
-        #summary_msg(f'Sink temperature:         {temp_s}')
-        loopcount3 = 0
-        sync_db('r0')
-        reach_temp(schedule.temperature)        
-        #print(f'schedule.temperature = {schedule.temperature}')
-        summary_msg(f'schedule.temperature = {schedule.temperature}')
         gc.collect()
-        
-            
-    
+
+
     gc.collect()
     
     
 def peltier_set(percentage: float):
-    summary_msg(f'__DEBUG_PELTIER_SET__ {percentage}')
     pelt.duty_u16(round((percentage*65535)/100))       # Set duty to desired percentage
+    summary_msg(f'__DEBUG_PELTIER_SET__ {percentage}')
     gc.collect()
     
 def heater_set(percentage: float):
-    summary_msg(f'__DEBUG_HEATER_SET__ {percentage}')  
     heat.duty_u16(round((percentage*65535)/100))       # Set duty to desired percentage
+    summary_msg(f'__DEBUG_HEATER_SET__ {percentage}')  
     gc.collect()
     
 def cooler_set(percentage: float):
@@ -199,7 +200,7 @@ def reach_temp(temp: float):
   global temp_w  
   heater_min_percentage = 0                                                       # Adjust hardware parameters
   heater_max_percentage = 50
-  peltier_min_percentage = 40
+  peltier_min_percentage = 30
   peltier_max_percentage = 80
 
   peltier_levels = float((peltier_max_percentage - peltier_min_percentage) / 5)
@@ -253,7 +254,6 @@ def sync_db(r_num: str):                              # Accepts argument as "r0"
     params = ( 'temperature', 'humidity', 'ventilation', 'start_light', 'end_light', 'start_date', 'end_date' )
     for i in params:
       exec( f'{r_num}.{i} = read_db("{r_num}_{i}")')
-      #exec(f'print({r_num}.{i})')
 
 
 if __name__=='__main__':
