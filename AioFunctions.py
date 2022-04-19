@@ -1,13 +1,14 @@
-#Latest commit 4aafa8b
+# Latest commit 97eea0a
 
-from umqtt.robust import MQTTClient
+from machine import RTC
+from umqtt.simple import MQTTClient
 from MiscFunctions import save_to_db
 from MiscFunctions import read_db
 from time import sleep
 import os
 import sys
 import gc
-import utime
+import time
 import machine
 import _thread
 
@@ -28,8 +29,17 @@ Peltier             PX      esp-actions.summary
 Calefactor          PX      esp-actions.summary
 Ventilation         PX      esp-actions.summary
 Humidifier          PX      esp-actions.summary
+
+To set rtc time:
+rtc.datetime((2022, 4, 14, 0, 0, 49, 0, -3))
+year  month  day  DOW  hour  minute  second  microsecond
+
+To get time:
+print(rtc.datetime())
 '''
 
+
+rtc = RTC()
 
 mqtt_client_id      = os.environ.get('AIO_CID')
 ADAFRUIT_IO_URL     = 'io.adafruit.com' 
@@ -49,51 +59,73 @@ client = MQTTClient(client_id = mqtt_client_id,
 client.DEBUG = True                                                     # Print diagnostic messages when retries/reconnects happens
 
 
-def mqtt_connect_and_subscribe():                                       # __WORKING__
+def mqtt_connect_and_subscribe():
     '''
     This loop is intended for being called in a separate thread in order to wait for incoming messages
     Included the connect, subscribe and check mqtt msg functions 
     '''
-    try:                                                                # mqtt_connect() function
+    start = time.ticks_ms()
+    try:
+        mqtt_connect()
+        subscribe_to_feeds()
+        while True:
+            delta = time.ticks_diff(time.ticks_ms(), start)
+            if delta >= 100:
+                check_mqtt()
+            gc.collect()
+    except Exception as e:
+        print('Could not complete connect and subscribe function. {}{}'.format(type(e).__name__, e))
+        print(rtc.datetime())
+        sleep(5)
+        #client.disconnect()
+        gc.collect()
+        mqtt_connect_and_subscribe()
+        
+
+def mqtt_connect():
+    try:
         client.connect()
         print('Connected succesfully to MQTT server')
-        gc.collect()
     except Exception as e:
         print('Could not connect to MQTT server {}{}'.format(type(e).__name__, e))
+        print(rtc.datetime())
+        sleep(5)
+        #client.disconnect()
         gc.collect()
-        sys.exit()
 
+    
+def subscribe_to_feeds():
     client.set_callback(callback)                                       # subscribe_to_feeds() function
-    for i in range(len(SUBSCRIBE_FEEDS)):
-        current_feed = bytes('{:s}/feeds/{:s}'.format(ADAFRUIT_USERNAME, SUBSCRIBE_FEEDS[i]), 'utf-8')
-        client.subscribe(current_feed)                                  # __TODO_ADJUST__ self, topic, qos=0
-        print(f'Subscribed to feed {current_feed}')
-    gc.collect()
-    start = time.ticks_ms()
-    while True:
-        delta = time.ticks_diff(time.ticks_ms(), start)
-        try:                                                            # check_mqtt() function
-            if delta >= 100:
-                client.wait_msg()
-                gc.collect()
-        except OSError as error:
-            print(error)
-            print('MQTT Connection failed, trying to reconnect...')
-            client.disconnect()
-            gc.collect()
-            mqtt_connect_and_subscribe()
-            continue
+    try:
+        for i in range(len(SUBSCRIBE_FEEDS)):
+            current_feed = bytes('{:s}/feeds/{:s}'.format(ADAFRUIT_USERNAME, SUBSCRIBE_FEEDS[i]), 'utf-8')
+            client.subscribe(current_feed)
+            print(f'Subscribed to feed {current_feed}')
+    except Exception as e:
+        print('Could not subscribe to feeds. {}{}'.format(type(e).__name__, e))
+        mqtt_connect()
+
+
+
+def check_mqtt():
+    try:
+        client.wait_msg()
+    except Exception as e:
+        print('Could not wait for messages. {}{}'.format(type(e).__name__, e))
+        sleep(5)
+        mqtt_connect()
+        subscribe_to_feeds()
 
 
 def send_mqtt(topic, msg):                                              # to_feed = b'Daddy_mdr/feeds/esp-actions.summary' , msg = holaa
     '''
     Send msg to adafruit topic
     '''
-    #to_feed = bytes('{:s}/feeds/{:s}'.format(ADAFRUIT_USERNAME, b'topic'), 'utf-8')
-    to_feed = bytes('{:s}/feeds/{:s}'.format(ADAFRUIT_USERNAME, topic), 'utf-8')
-    #print(f'__DEBUG__ to_feed = {to_feed} , msg = {msg} ')
-    client.publish(to_feed, bytes(str(msg), 'utf-8'))                   # __TODO_ADJUST__ self, topic, msg, retain=False, qos=0
-
+    try:
+        to_feed = bytes('{:s}/feeds/{:s}'.format(ADAFRUIT_USERNAME, topic), 'utf-8')
+        client.publish(to_feed, bytes(str(msg), 'utf-8'))
+    except Exception as e:
+        print('Error sending reports to MQTT server (send_mqtt()).{}{}'.format(type(e).__name__, e))
 
 def callback(topic, msg):
     '''
@@ -105,8 +137,9 @@ def callback(topic, msg):
     if received_topic == 'esp-actions.cmd':                             # Take actions acording to topic(groups), esp-actions or reports
         remote_cmd(str(msg,'utf-8'))                                    # Convert msg to str and pass it to the cmd analize function
     if received_topic == 'reports':
-        print('ESP reported: ' + str(msg,'utf-8'))
-    #gc.collect()
+        summary_msg('ESP reported: ' + str(msg,'utf-8'))
+        #ping=
+    gc.collect()
 
 
 def remote_cmd(received_cmd):
@@ -175,8 +208,8 @@ def set_value(attr_value):                                              # Analiz
     
     
 def summary_msg(msg: str):
-    send_mqtt('esp-actions.summary', msg)
     print(msg)
+    send_mqtt('esp-actions.summary', msg)
 
 
 def threaded_mqtt():
