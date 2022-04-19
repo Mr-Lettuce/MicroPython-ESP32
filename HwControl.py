@@ -87,6 +87,10 @@ def control_monitoring():
 
   while True:
     #dht.measure()                                    # sense DHT
+    delta = time.ticks_diff(time.ticks_ms(), start)
+    loopcount2 += 1
+    loopcount3 += 1
+    loopcount4 += 1
     
     if delta % 2 == 0:                                # Sense the probes every 2 miliseconds
         val_w += water_p.read_uv()
@@ -133,27 +137,26 @@ def control_monitoring():
     if loopcount3 >= 5000:
         #sel_r = read_db('sel_r')                              # OLD 
         #sync_db('r0')                                         # OLD
-        schedule = sync_db(read_db('sel_r'))                              # Apply the selected routine, saved in db, to actual schedule params
+        sync_db(read_db('sel_r'))                              # Apply the selected routine, saved in db, to actual schedule params
         
         reach_temp(schedule.temperature)
         send_mqtt('reports.temperature', temp_w)#d.temperature )
         send_mqtt('reports.humidity', temp_s)#d.humidity )
         loopcount3 = 0
 
+        summary_msg(f'  Selected routine = {read_db('sel_r')} \n  Target temperature = {schedule.temperature} \n  Ventilation intensity = {schedule.ventilation} \n  Light start/end time = {schedule.start_light} / {schedule.end_light}')
+
+
     if loopcount4 >= 900000:
         if vent_on == True:
             ventilation_set(0)
         else:
             ventilation_set(schedule.ventilation)
-        summary_msg(f'Selected routine = {sel_r} \n Target temperature = {schedule.temperature} \n Ventilation intensity = {schedule.ventilation} \n Light start/end time = {schedule.start_light} / {schedule.end_light}')
+        #summary_msg(f'Selected routine = {sel_r} \n Target temperature = {schedule.temperature} \n Ventilation intensity = {schedule.ventilation} \n Light start/end time = {schedule.start_light} / {schedule.end_light}')
         loopcount4 = 0
         
         
     gc.collect()
-    delta = time.ticks_diff(time.ticks_ms(), start)
-    loopcount2 += 1
-    loopcount3 += 1
-    loopcount4 += 1
 
 
 def peltier_set(percentage: float):
@@ -238,11 +241,10 @@ def reach_temp(temp: float):
 
 
 def sync_db(r_num: str):                              # Accepts argument as "r0", "r1", etc
-    rtemp = Routine
+    global schedule
     params = ( 'temperature', 'humidity', 'ventilation', 'start_light', 'end_light', 'start_date', 'end_date' )
     for i in params:
-      exec( f'rtemp.{i} = read_db("{r_num}_{i}")')
-    return rtemp
+        exec( f'schedule.{i} = read_db("{r_num}_{i}")')
 
 
 if __name__=='__main__':
