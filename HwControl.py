@@ -54,46 +54,45 @@ ventilation = machine.PWM(Pin(VENTILATION_PIN), freq=500, duty=0)
 #bPin = Pin(B_LED_PIN, Pin.OUT)
 
 
-r0 = Routine()                                  # Initialization for routine 0 
+schedule = Routine()                                  # Initialization for routine 0 
 rtc = RTC()
 
 
 def control_monitoring():
   '''
-  This function sense the temperature and humidity of all sensors and control the sink temperature trough PWM and a cooler.
+   This is the core function of the incubator, in charge of sensing real world, adjust water/sink temperature (maybe humidity too), lights,
+  status RGB LED
   Also control the temperature needs comparing to the routine.
-  
-  Its designed to work in a thread
   '''
+  # General variables initialization
   start = time.ticks_ms()
-  
-  
-  global temp_w
-  global temp_s
-  temp_w = 0.0
-  temp_s = 0.0
-  global val_w
-  global val_s
-  val_w = 0
-  val_s = 0
+  global schedule
+  vent_on = False
     
+  # Variables for thermocouple sensing
+  global temp_w                                       # Water temperature immediate value
+  global temp_s                                       # Sink temperature immediate value
+  temp_w = 0.0                                        #
+  temp_s = 0.0                                        #
+  global val_w                                        # Value for smooth ADC sensing (water)
+  global val_s                                        # Value for smooth ADC sensing (sink)
+  val_w = 0                                           #
+  val_s = 0                                           #
   rs = 68000                                          # Resistor in the circuit board, same for water and sink probe
   vcc = 3.3                                           # Operating voltage
   loopcount1 = 0                                      # Count for ADC sensing
   loopcount2 = 0                                      # Count for cooler response
   loopcount3 = 0                                      # Count for reports to MQTT and adjust for new settings
+  loopcount4 = 0                                      # Count for ventilation and general report
+
   while True:
-    schedule = r0                                     # __TODO__ 'routine0' must change to the current routine to folow
-    gc.collect()
-    delta = time.ticks_diff(time.ticks_ms(), start)
-    loopcount2 += 1
-    loopcount3 += 1
     #dht.measure()                                    # sense DHT
     
     if delta % 2 == 0:                                # Sense the probes every 2 miliseconds
         val_w += water_p.read_uv()
         val_s += sink_p.read_uv()
         loopcount1 += 1
+        
     if loopcount1 >= 1000:                            # Average value from 1000 samples
         val_w = val_w / loopcount1;
         val_s = val_s / loopcount1;
@@ -132,34 +131,45 @@ def control_monitoring():
 
     
     if loopcount3 >= 5000:
-        sync_db('r0')
+        #sel_r = read_db('sel_r')                              # OLD 
+        #sync_db('r0')                                         # OLD
+        schedule = sync_db(read_db('sel_r'))                              # Apply the selected routine, saved in db, to actual schedule params
+        
         reach_temp(schedule.temperature)
-        loopcount3 = 0
         send_mqtt('reports.temperature', temp_w)#d.temperature )
         send_mqtt('reports.humidity', temp_s)#d.humidity )
-        gc.collect()
+        loopcount3 = 0
 
-
+    if loopcount4 >= 900000:
+        if vent_on == True:
+            ventilation_set(0)
+        else:
+            ventilation_set(schedule.ventilation)
+        summary_msg(f'Selected routine = {sel_r} \n Target temperature = {schedule.temperature} \n Ventilation intensity = {schedule.ventilation} \n Light start/end time = {schedule.start_light} / {schedule.end_light}')
+        loopcount4 = 0
+        
+        
     gc.collect()
-    
-    
+    delta = time.ticks_diff(time.ticks_ms(), start)
+    loopcount2 += 1
+    loopcount3 += 1
+    loopcount4 += 1
+
+
 def peltier_set(percentage: float):
     pelt.duty_u16(round((percentage*65535)/100))       # Set duty to desired percentage
     summary_msg(f'__DEBUG_PELTIER_SET__ {percentage}')
-    gc.collect()
     
 def heater_set(percentage: float):
     heat.duty_u16(round((percentage*65535)/100))       # Set duty to desired percentage
     summary_msg(f'__DEBUG_HEATER_SET__ {percentage}')  
-    gc.collect()
     
 def cooler_set(percentage: float):
     cooler.duty_u16(round((percentage*65535)/100))     # Set duty to desired percentage
-    gc.collect()
     
 def ventilation_set(percentage: float):
-    cooler.duty_u16(round((percentage*65535)/100))     # Set duty to desired percentage
-    gc.collect()
+    ventilation.duty_u16(round((percentage*65535)/100))     # Set duty to desired percentage
+    
     
 def reach_temp(temp: float):
   '''
@@ -167,35 +177,6 @@ def reach_temp(temp: float):
   measure the % and define pwm duty acoording to the diff
   
   It will never use the heater neither peltier al full power to prevent unmanageable situations, so the percentage will be used in a defined range, easy to adjust above
-  
-  With:
-    heater_min_percentage = 0
-    heater_max_percentage = 50
-    peltier_min_percentage = 40
-    peltier_max_percentage = 80
-  temp-set        dht             delta          p/h %
-  
-  24              19              5              80
-  24              19.5            4.5            76
-  24              20              4              72
-  24              20.5            3.5            68
-  24              21              3              64
-  24              21.5            2.5            60
-  24              22              2              56
-  24              22.5            1.5            52
-  24              23              1              48
-  24              23.5            0.5            44
-  24     ---      24              0              0
-  24              24.5            0.5            2.5
-  24              25              1              5
-  24              25.5            1.5            7.8
-  24              26              2              10
-  24              26.5            2.5            12.5
-  24              27              3              15
-  24              27.5            3.5            17.5
-  24              28              4              20
-  24              28.5            4.5            22.5
-  24              29              5              25
   '''
   global temp_w  
   heater_min_percentage = 0                                                       # Adjust hardware parameters
@@ -247,13 +228,21 @@ def reach_temp(temp: float):
   rlight = Signal(rPin, invert=False) #set signal pin
   rlight.value(1)                     #activate signal pin method 1
   rlight.on(1)                        #activate signal pin method 2
+  
+  GOOD                                # Green
+  GOOD NOT CONNECTED                  # Green flashing
+  GOOD, NO MQTT                       # Green and red flashing
+  ADJUSTING                           # Blue
+  ALERT/ERROR                         # Red
   '''
 
 
 def sync_db(r_num: str):                              # Accepts argument as "r0", "r1", etc
+    rtemp = Routine
     params = ( 'temperature', 'humidity', 'ventilation', 'start_light', 'end_light', 'start_date', 'end_date' )
     for i in params:
-      exec( f'{r_num}.{i} = read_db("{r_num}_{i}")')
+      exec( f'rtemp.{i} = read_db("{r_num}_{i}")')
+    return rtemp
 
 
 if __name__=='__main__':
