@@ -1,4 +1,4 @@
-# Latest commit 8d3aaaf
+# 
 
 import os
 import gc
@@ -57,7 +57,7 @@ def read_db(key):
     if key.split('_')[-1] == 'temperature' or key.split('_')[-1] == 'humidity':
         return float(val)
     else:
-        return str(val)
+        return str(val).rsplit("'")[-2]
 
 
 def show_db():
@@ -72,11 +72,10 @@ def show_db():
     f.close()
 
 
-def init_db_routine(r_num):              # __TODO__ CHECK __NOT_WORKING_
+def init_db_routine(r_num: str):
     params = { 'temperature' : 24, 'humidity' : 90 , 'ventilation' : 10, 'start_light' : '08:00', 'end_light' : '18:00', 'start_date' : '24:03:2022', 'end_date' : '24:03:2032' }
-    for k, v in params.items():
-        exec ( f'{r_num} = repr({r_num})')
-        exec ( f'save_to_db("{r0}_{k}", {v})')
+    for k, v in params.items():        
+        exec ( f'save_to_db("{r_num}_{k}", "{v}")')
 
 if __name__=='__main__':
     print('done MiscF')
